@@ -74,7 +74,7 @@ def success():
 #######################
 
 
-@app.route("/_check", methods=["POST"])
+@app.route("/_check")
 def check():
     """
     User has submitted the form with a word ('attempt')
@@ -87,7 +87,8 @@ def check():
     app.logger.debug("Entering check")
 
     # The data we need, from form and from cookie
-    text = flask.request.form["attempt"]
+    text = flask.request.args.get("text",type=str)
+    app.logger.info(text)
     jumble = flask.session["jumble"]
     matches = flask.session.get("matches", [])  # Default to empty list
 
@@ -95,11 +96,15 @@ def check():
     in_jumble = LetterBag(jumble).contains(text)
     matched = WORDS.has(text)
 
+
     # Respond appropriately
     if matched and in_jumble and not (text in matches):
         # Cool, they found a new word
         matches.append(text)
         flask.session["matches"] = matches
+        app.logger.debug("Got a JSON request")
+        rslt = {"key": matches, "number":len(matches), "limit": flask.session["target_count"]}
+        return flask.jsonify(result=rslt)
     elif text in matches:
         flask.flash("You already found {}".format(text))
     elif not matched:
@@ -112,10 +117,6 @@ def check():
         assert False  # Raises AssertionError
 
     # Choose page:  Solved enough, or keep going?
-    if len(matches) >= flask.session["target_count"]:
-       return flask.redirect(flask.url_for("success"))
-    else:
-       return flask.redirect(flask.url_for("keep_going"))
 
 ###############
 # AJAX request handlers
@@ -123,11 +124,13 @@ def check():
 ###############
 
 
-@app.route("/_example")
-def example():
+@app.route("/_sample")
+def func1():
     """
     Example ajax request handler
     """
+    text = flask.request.args.get("text",type=str ) 
+    rslt = {"key"} 
     app.logger.debug("Got a JSON request")
     rslt = {"key": "value"}
     return flask.jsonify(result=rslt)
